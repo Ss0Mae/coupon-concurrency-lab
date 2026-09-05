@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: coupon
+    folder: Coupon Lab
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,0 +1,68 @@
+# 측정 인프라. 애플리케이션(JVM)과 k6는 호스트에서 실행한다(bench/run.sh 참고).
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: coupon-mysql
+    command:
+      - --performance-schema=ON
+      - --max-connections=500
+      - --innodb-buffer-pool-size=512M
+      - --innodb-lock-wait-timeout=50
+      - --innodb-print-all-deadlocks=ON
+      - --character-set-server=utf8mb4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: coupon
+      MYSQL_USER: coupon
+      MYSQL_PASSWORD: coupon
+    ports: ["3306:3306"]
+    volumes:
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    deploy:
+      resources:
+        limits: { cpus: "4", memory: 1536M }
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.16.0
+    container_name: coupon-mysqld-exporter
+    command:
+      - --mysqld.address=mysql:3306
+      - --mysqld.username=exporter
+      - --collect.info_schema.innodb_metrics
+      - --collect.global_status
+      - --collect.global_variables
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: exporter
+    ports: ["9104:9104"]
+    depends_on:
+      mysql: { condition: service_healthy }
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: coupon-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --storage.tsdb.retention.time=30d
+    ports: ["9090:9090"]
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: coupon-grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports: ["3000:3000"]
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]

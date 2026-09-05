@@ -1,0 +1,444 @@
+{
+ "uid": "coupon-lab",
+ "title": "Coupon Concurrency Lab",
+ "timezone": "browser",
+ "refresh": "5s",
+ "schemaVersion": 39,
+ "time": {
+  "from": "now-15m",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "type": "timeseries",
+   "title": "전체 TPS (전략별)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/api/coupons.*\"}[5s]))",
+     "legendFormat": "{{uri}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "성공 발급 TPS (전략별)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (strategy) (rate(coupon_issue_total{result=\"ISSUED\"}[5s]))",
+     "legendFormat": "{{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "p95 응답시간 (전략별)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 8,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri=~\"/api/coupons.*\"}[5s])))",
+     "legendFormat": "{{uri}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "p99 응답시간 (전략별)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 8,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri=~\"/api/coupons.*\"}[5s])))",
+     "legendFormat": "{{uri}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "HikariCP 커넥션 (활성/유휴/대기)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 16,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "hikaricp_connections_active",
+     "legendFormat": "active"
+    },
+    {
+     "refId": "B",
+     "expr": "hikaricp_connections_idle",
+     "legendFormat": "idle"
+    },
+    {
+     "refId": "C",
+     "expr": "hikaricp_connections_pending",
+     "legendFormat": "pending"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "HikariCP 커넥션 획득 대기시간 (평균/최대)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 16,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "rate(hikaricp_connections_acquire_seconds_sum[5s]) / rate(hikaricp_connections_acquire_seconds_count[5s])",
+     "legendFormat": "avg"
+    },
+    {
+     "refId": "B",
+     "expr": "hikaricp_connections_acquire_seconds_max",
+     "legendFormat": "max"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "InnoDB 행 잠금 대기시간 (ms/s) 및 대기 횟수",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 24,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "rate(mysql_global_status_innodb_row_lock_time[5s])",
+     "legendFormat": "row_lock_time ms/s"
+    },
+    {
+     "refId": "B",
+     "expr": "rate(mysql_global_status_innodb_row_lock_waits[5s])",
+     "legendFormat": "row_lock_waits /s"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "InnoDB 현재 행 잠금 대기 / 데드락 누적",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 24,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "mysql_global_status_innodb_row_lock_current_waits",
+     "legendFormat": "current_waits"
+    },
+    {
+     "refId": "B",
+     "expr": "mysql_info_schema_innodb_metrics_lock_lock_deadlocks_total",
+     "legendFormat": "deadlocks"
+    }
+   ]
+  },
+  {
+   "type": "piechart",
+   "title": "응답 결과 비율 (성공/품절/중복/재시도소진)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 32,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (result) (increase(coupon_issue_total[$__range]))",
+     "legendFormat": "{{result}}"
+    },
+    {
+     "refId": "B",
+     "expr": "sum(increase(coupon_error_total[$__range]))",
+     "legendFormat": "SERVER_ERROR"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "낙관적 락 충돌 / 재시도 (초당)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 32,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "rate(coupon_optimistic_conflict_total[5s])",
+     "legendFormat": "conflicts/s"
+    },
+    {
+     "refId": "B",
+     "expr": "rate(coupon_retry_total[5s])",
+     "legendFormat": "retries/s"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "CPU 사용률 (JVM 프로세스 / 시스템)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 40,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "process_cpu_usage",
+     "legendFormat": "process"
+    },
+    {
+     "refId": "B",
+     "expr": "system_cpu_usage",
+     "legendFormat": "system"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "JVM 힙 메모리 사용량",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 40,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
+     "legendFormat": "used"
+    },
+    {
+     "refId": "B",
+     "expr": "sum(jvm_memory_max_bytes{area=\"heap\"})",
+     "legendFormat": "max"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "MySQL 스레드 (connected/running)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 48,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "mysql_global_status_threads_connected",
+     "legendFormat": "connected"
+    },
+    {
+     "refId": "B",
+     "expr": "mysql_global_status_threads_running",
+     "legendFormat": "running"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "SQL 실행 수 (초당, 종류별)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 48,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "rate(mysql_global_status_commands_total{command=~\"select|insert|update|commit|rollback\"}[5s])",
+     "legendFormat": "{{command}}"
+    }
+   ]
+  }
+ ],
+ "templating": {
+  "list": []
+ }
+}
